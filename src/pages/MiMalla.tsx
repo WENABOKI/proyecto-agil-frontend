@@ -48,10 +48,7 @@ export default function MiMalla() {
     };
 
     setUser(data);
-
-    if (data.carreras.length > 0) {
-      setCarreraSeleccionada(data.carreras[0]);
-    }
+    if (data.carreras.length > 0) setCarreraSeleccionada(data.carreras[0]);
   }, [navigate]);
 
   useEffect(() => {
@@ -68,14 +65,8 @@ export default function MiMalla() {
 
         const data = await res.json();
 
-        if (!res.ok) {
-          setErrorMsg(data.message || "Error al obtener la malla.");
-          setMalla([]);
-          return;
-        }
-
-        if (!Array.isArray(data)) {
-          setErrorMsg("Formato de malla inválido desde el servidor.");
+        if (!res.ok || !Array.isArray(data)) {
+          setErrorMsg("Error al obtener la malla.");
           setMalla([]);
           return;
         }
@@ -120,6 +111,30 @@ export default function MiMalla() {
             )}
           </div>
         </div>
+
+        {user && user.carreras.length > 1 && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {user.carreras.map((c) => {
+              const active =
+                carreraSeleccionada?.codigo === c.codigo &&
+                carreraSeleccionada?.catalogo === c.catalogo;
+
+              return (
+                <button
+                  key={`${c.codigo}-${c.catalogo}`}
+                  onClick={() => setCarreraSeleccionada(c)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
+                    active
+                      ? "bg-[#2D5F8F] text-white border-[#2D5F8F]"
+                      : "bg-white text-[#2D5F8F] border-[#2D5F8F] hover:bg-[#e0ebf7]"
+                  }`}
+                >
+                  {c.nombre} ({c.catalogo})
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {loading && (
           <div className="flex items-center gap-2 text-slate-600">
