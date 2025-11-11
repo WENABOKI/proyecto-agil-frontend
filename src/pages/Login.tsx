@@ -11,25 +11,33 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const response = await fetch("http://localhost:3000/auth/login", {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: rut,
-        password: password,
-      }),
-    });
+    try {
+      const response = await fetch("http://localhost:3000/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: rut,       
+          password: password,
+        }),
+      });
 
-    const data = await response.json()
+      const data = await response.json();
 
-    if (response.ok) {
-      console.log("Login exitoso:", { rut, password });
-      navigate("/dashboard");
-    } else {
-      alert(data.message);
+      if (response.ok) {
+        
+        localStorage.setItem("user", JSON.stringify(data));
+
+        console.log("Login exitoso:", data);
+        navigate("/dashboard");
+      } else {
+        alert(data.message || "Error al iniciar sesión");
+      }
+    } catch (err) {
+      console.error("Error en la petición de login:", err);
+      alert("No se pudo conectar con el servidor. Intenta nuevamente.");
     }
   };
 
