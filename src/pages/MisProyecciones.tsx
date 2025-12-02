@@ -18,8 +18,8 @@ interface CursoProyectado {
   asignatura: string;
   creditos: number;
   // semestre restante donde el backend sugiere tomar este ramo
-  semestreSugerido: number; 
-  nivel?: number;           // opcional, si también lo mandas
+  semestreSugerido: number;
+  nivel?: number; // opcional, si también lo mandas
 }
 
 interface ProyeccionResponse {
@@ -135,9 +135,7 @@ export default function Proyeccion() {
             )}
             {meta && (
               <p className="text-xs text-slate-600 mt-1">
-                Carrera: <span className="font-semibold">{meta.carrera}</span>{" "}
-                · Créditos totales proyectados:{" "}
-                <span className="font-semibold">{meta.totalCreditos}</span>
+                Carrera: <span className="font-semibold">{meta.carrera}</span>
               </p>
             )}
           </div>
@@ -183,11 +181,6 @@ export default function Proyeccion() {
         {/* GRID DE SEMESTRES RESTANTES */}
         {!loading && !errorMsg && semestresOrdenados.length > 0 && (
           <div className="mt-6">
-            <p className="text-sm text-slate-600 mb-3">
-              Mostrando solo los <span className="font-semibold">semestres restantes</span> y los
-              ramos sugeridos para cada uno.
-            </p>
-
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
               {semestresOrdenados.map((semestre) => (
                 <div
