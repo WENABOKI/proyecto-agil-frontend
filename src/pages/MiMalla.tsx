@@ -65,6 +65,7 @@ export default function MiMalla() {
 
         const data = await res.json();
 
+        // Ajusta esto según cómo responda tu backend
         if (!res.ok || !Array.isArray(data)) {
           setErrorMsg("Error al obtener la malla.");
           setMalla([]);
@@ -95,14 +96,24 @@ export default function MiMalla() {
     .map(Number)
     .sort((a, b) => a - b);
 
-  //  Botón para ir a Proyección
+  // 👉 Ahora SOLO genera la proyección (marca en sessionStorage) y NO navega
   const handleGenerarProyeccion = () => {
+    if (!user || !carreraSeleccionada) {
+      window.alert("No se pudo generar la proyección. Falta información de usuario o carrera.");
+      return;
+    }
+
     const confirmar = window.confirm(
       "¿Deseas generar una proyección académica automática con tus semestres restantes?"
     );
-    if (confirmar) {
-      navigate("/proyecciones", { state: { generar: true } });
-    }
+    if (!confirmar) return;
+
+    const key = `projectionGenerated:${user.rut}:${carreraSeleccionada.codigo}-${carreraSeleccionada.catalogo}`;
+    sessionStorage.setItem(key, "true");
+
+    window.alert(
+      'Proyección generada correctamente.\nAhora puedes visualizarla en la sección "Mis proyecciones".'
+    );
   };
 
   return (
@@ -210,7 +221,6 @@ export default function MiMalla() {
           </div>
         )}
 
-        {/* SIN MALLA */}
         {!loading && !errorMsg && malla.length === 0 && carreraSeleccionada && (
           <p className="text-slate-600 mt-4">
             No se encontraron asignaturas para esta malla.

@@ -29,10 +29,12 @@ interface ProyeccionResponse {
   cursosSugeridos: CursoProyectado[];
 }
 
-//numeros romanos 1-20//
+// ===============================
+//   CONVERSOR ROMANO 1–20 SIMPLE
+// ===============================
 const numeroToRoman = (n: number) => {
   const romans = [
-    "", 
+    "", // índice 0 no se usa
     "I", "II", "III", "IV", "V",
     "VI", "VII", "VIII", "IX", "X",
     "XI", "XII", "XIII", "XIV", "XV",
@@ -71,7 +73,7 @@ export default function Proyeccion() {
     if (data.carreras.length > 0) setCarreraSeleccionada(data.carreras[0]);
   }, [navigate]);
 
-  // 2) Detectar si MiMalla pidió generar una proyección
+  // 2) (Opcional) Si alguna vez llegas con state.generar desde otro lado
   useEffect(() => {
     const state = location.state as any;
     if (state?.generar) {
@@ -79,7 +81,28 @@ export default function Proyeccion() {
     }
   }, [location.state]);
 
-  // 3) Cuando cambia la carrera Y ya se solicitó proyección, pedirla al backend
+  // 3) Leer de sessionStorage si ya se había generado proyección en esta sesión
+  useEffect(() => {
+    if (!user || !carreraSeleccionada) return;
+
+    const key = `projectionGenerated:${user.rut}:${carreraSeleccionada.codigo}-${carreraSeleccionada.catalogo}`;
+    const flag = sessionStorage.getItem(key);
+
+    if (flag === "true") {
+      setProyeccionSolicitada(true);
+    }
+  }, [user, carreraSeleccionada]);
+
+  // 4) Cada vez que proyeccionSolicitada pase a true y tengamos user + carrera,
+  //    guardar el flag en sessionStorage (para esta sesión)
+  useEffect(() => {
+    if (!proyeccionSolicitada || !user || !carreraSeleccionada) return;
+
+    const key = `projectionGenerated:${user.rut}:${carreraSeleccionada.codigo}-${carreraSeleccionada.catalogo}`;
+    sessionStorage.setItem(key, "true");
+  }, [proyeccionSolicitada, user, carreraSeleccionada]);
+
+  // 5) Cuando cambia la carrera Y ya se solicitó proyección, pedirla al backend
   useEffect(() => {
     const fetchProyeccion = async () => {
       if (!carreraSeleccionada || !proyeccionSolicitada) return;
@@ -120,7 +143,7 @@ export default function Proyeccion() {
     fetchProyeccion();
   }, [carreraSeleccionada, proyeccionSolicitada]);
 
-  // 4) Agrupar por semestreSugerido (semestres restantes)
+  // 6) Agrupar por semestreSugerido (semestres restantes)
   const semestres: Record<number, CursoProyectado[]> = {};
   if (Array.isArray(proyeccion)) {
     proyeccion.forEach((r) => {
@@ -186,7 +209,7 @@ export default function Proyeccion() {
           </div>
         )}
 
-        {/* SI NO SE HA SOLICITADO NINGUNA PROYECCIÓN */}
+        {/* SI NO SE HA SOLICITADO NINGUNA PROYECCIÓN EN ESTA SESIÓN */}
         {!proyeccionSolicitada && !loading && !errorMsg && (
           <p className="text-slate-600 mt-6 text-center">
             El alumno aún no ha generado ninguna proyección académica.
