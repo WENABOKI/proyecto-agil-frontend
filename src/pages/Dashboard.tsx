@@ -16,8 +16,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     const path = location.pathname;
+
     if (path === '/dashboard') setActiveMenu('inicio');
-    else if (path === '/perfil') setActiveMenu('perfil');
     else if (path === '/malla') setActiveMenu('malla');
     else if (path === '/proyecciones') setActiveMenu('proyecciones');
   }, [location]);
@@ -44,6 +44,7 @@ export default function Dashboard() {
         <Box sx={{ height: '100px' }} />
 
         <Box sx={{ px: 3, pt: 2 }}>
+          {/* INICIO */}
           <Box
             onClick={() => handleNavigation('inicio', '/dashboard')}
             sx={{
@@ -53,9 +54,7 @@ export default function Dashboard() {
               borderLeft: activeMenu === 'inicio' ? '4px solid #FF8A5B' : '4px solid transparent',
               ml: -3,
               pl: 3,
-              '&:hover': {
-                backgroundColor: 'rgba(255,255,255,0.05)',
-              },
+              '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' },
             }}
           >
             <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
@@ -63,25 +62,7 @@ export default function Dashboard() {
             </Typography>
           </Box>
 
-          <Box
-            onClick={() => handleNavigation('perfil', '/perfil')}
-            sx={{
-              py: 1.5,
-              cursor: 'pointer',
-              backgroundColor: activeMenu === 'perfil' ? 'rgba(255,255,255,0.1)' : 'transparent',
-              borderLeft: activeMenu === 'perfil' ? '4px solid #FF8A5B' : '4px solid transparent',
-              ml: -3,
-              pl: 3,
-              '&:hover': {
-                backgroundColor: 'rgba(255,255,255,0.05)',
-              },
-            }}
-          >
-            <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
-              Perfil
-            </Typography>
-          </Box>
-
+          {/* MI MALLA */}
           <Box
             onClick={() => handleNavigation('malla', '/malla')}
             sx={{
@@ -91,9 +72,7 @@ export default function Dashboard() {
               borderLeft: activeMenu === 'malla' ? '4px solid #FF8A5B' : '4px solid transparent',
               ml: -3,
               pl: 3,
-              '&:hover': {
-                backgroundColor: 'rgba(255,255,255,0.05)',
-              },
+              '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' },
             }}
           >
             <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
@@ -101,6 +80,7 @@ export default function Dashboard() {
             </Typography>
           </Box>
 
+          {/* MIS PROYECCIONES */}
           <Box
             onClick={() => handleNavigation('proyecciones', '/proyecciones')}
             sx={{
@@ -110,9 +90,7 @@ export default function Dashboard() {
               borderLeft: activeMenu === 'proyecciones' ? '4px solid #FF8A5B' : '4px solid transparent',
               ml: -3,
               pl: 3,
-              '&:hover': {
-                backgroundColor: 'rgba(255,255,255,0.05)',
-              },
+              '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' },
             }}
           >
             <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
@@ -136,9 +114,7 @@ export default function Dashboard() {
               borderRadius: 2,
               fontSize: '0.9rem',
               fontWeight: 500,
-              '&:hover': {
-                backgroundColor: '#FF7043',
-              },
+              '&:hover': { backgroundColor: '#FF7043' },
             }}
           >
             Cerrar sesión
@@ -163,8 +139,7 @@ export default function Dashboard() {
             height: 100
           }}
         >
-          <Toolbar sx={{ height: '100%' }}>
-          </Toolbar>
+          <Toolbar sx={{ height: '100%' }} />
         </AppBar>
 
         <Box 

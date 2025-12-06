@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { GraduationCap, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface Carrera {
   codigo: string;
@@ -17,9 +17,8 @@ interface CursoProyectado {
   codigo: string;
   asignatura: string;
   creditos: number;
-  // semestre restante donde el backend sugiere tomar este ramo
   semestreSugerido: number;
-  nivel?: number; // opcional, si también lo mandas
+  nivel?: number;
 }
 
 interface ProyeccionResponse {
@@ -30,10 +29,16 @@ interface ProyeccionResponse {
   cursosSugeridos: CursoProyectado[];
 }
 
-// reutilizamos la función de romanos para etiquetar semestres
+//numeros romanos 1-20//
 const numeroToRoman = (n: number) => {
-  const romans = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
-  return romans[n - 1] ?? String(n);
+  const romans = [
+    "", 
+    "I", "II", "III", "IV", "V",
+    "VI", "VII", "VIII", "IX", "X",
+    "XI", "XII", "XIII", "XIV", "XV",
+    "XVI", "XVII", "XVIII", "XIX", "XX"
+  ];
+  return romans[n] ?? String(n);
 };
 
 export default function Proyeccion() {
@@ -43,7 +48,10 @@ export default function Proyeccion() {
   const [meta, setMeta] = useState<Omit<ProyeccionResponse, "cursosSugeridos"> | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [proyeccionSolicitada, setProyeccionSolicitada] = useState(false);
+
   const navigate = useNavigate();
+  const location = useLocation();
 
   // 1) Recuperar usuario y carrera seleccionada desde localStorage
   useEffect(() => {
@@ -63,10 +71,18 @@ export default function Proyeccion() {
     if (data.carreras.length > 0) setCarreraSeleccionada(data.carreras[0]);
   }, [navigate]);
 
-  // 2) Cuando cambia la carrera, pedir la PROYECCIÓN al backend
+  // 2) Detectar si MiMalla pidió generar una proyección
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.generar) {
+      setProyeccionSolicitada(true);
+    }
+  }, [location.state]);
+
+  // 3) Cuando cambia la carrera Y ya se solicitó proyección, pedirla al backend
   useEffect(() => {
     const fetchProyeccion = async () => {
-      if (!carreraSeleccionada) return;
+      if (!carreraSeleccionada || !proyeccionSolicitada) return;
       setLoading(true);
       setErrorMsg(null);
 
@@ -102,9 +118,9 @@ export default function Proyeccion() {
     };
 
     fetchProyeccion();
-  }, [carreraSeleccionada]);
+  }, [carreraSeleccionada, proyeccionSolicitada]);
 
-  // 3) Agrupar por semestreSugerido (semestres restantes)
+  // 4) Agrupar por semestreSugerido (semestres restantes)
   const semestres: Record<number, CursoProyectado[]> = {};
   if (Array.isArray(proyeccion)) {
     proyeccion.forEach((r) => {
@@ -133,9 +149,13 @@ export default function Proyeccion() {
                 RUT: <span className="font-semibold">{user.rut}</span>
               </p>
             )}
-            {meta && (
+            {carreraSeleccionada && (
               <p className="text-xs text-slate-600 mt-1">
-                Carrera: <span className="font-semibold">{meta.carrera}</span>
+                Carrera:{" "}
+                <span className="font-semibold">
+                  {carreraSeleccionada.nombre} (
+                  {carreraSeleccionada.codigo}-{carreraSeleccionada.catalogo})
+                </span>
               </p>
             )}
           </div>
@@ -166,6 +186,13 @@ export default function Proyeccion() {
           </div>
         )}
 
+        {/* SI NO SE HA SOLICITADO NINGUNA PROYECCIÓN */}
+        {!proyeccionSolicitada && !loading && !errorMsg && (
+          <p className="text-slate-600 mt-6 text-center">
+            El alumno aún no ha generado ninguna proyección académica.
+          </p>
+        )}
+
         {/* ESTADOS DE CARGA / ERROR */}
         {loading && (
           <div className="flex items-center gap-2 text-slate-600">
@@ -178,45 +205,49 @@ export default function Proyeccion() {
           <p className="text-red-500 font-medium mb-4">{errorMsg}</p>
         )}
 
-        {/* GRID DE SEMESTRES RESTANTES */}
-        {!loading && !errorMsg && semestresOrdenados.length > 0 && (
-          <div className="mt-6">
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
-              {semestresOrdenados.map((semestre) => (
-                <div
-                  key={semestre}
-                  className="bg-slate-200/80 rounded-xl shadow-inner flex flex-col h-full"
-                >
-                  <div className="bg-[#2D5F8F] text-white text-center py-2 rounded-t-xl font-semibold tracking-wide">
-                    Semestre {numeroToRoman(semestre)}
-                  </div>
-
-                  <div className="p-3 space-y-3">
-                    {semestres[semestre].map((ramo) => (
-                      <div
-                        key={ramo.codigo}
-                        className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-3 text-xs leading-tight"
-                      >
-                        <p className="font-semibold text-slate-700 text-[0.75rem] tracking-tight">
-                          {ramo.codigo}
-                        </p>
-                        <p className="text-[0.8rem] text-slate-900 mt-1">
-                          {ramo.asignatura}
-                        </p>
-                        <div className="mt-2 text-[0.7rem] text-slate-600">
-                          {ramo.creditos} SCT
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* SIN RESULTADOS */}
+        {/* GRID DE SEMESTRES RESTANTES (solo si hubo solicitud y hay datos) */}
         {!loading &&
+          !errorMsg &&
+          proyeccionSolicitada &&
+          semestresOrdenados.length > 0 && (
+            <div className="mt-6">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
+                {semestresOrdenados.map((semestre) => (
+                  <div
+                    key={semestre}
+                    className="bg-slate-200/80 rounded-xl shadow-inner flex flex-col h-full"
+                  >
+                    <div className="bg-[#2D5F8F] text-white text-center py-2 rounded-t-xl font-semibold tracking-wide">
+                      {numeroToRoman(semestre)}
+                    </div>
+
+                    <div className="p-3 space-y-3">
+                      {semestres[semestre].map((ramo) => (
+                        <div
+                          key={ramo.codigo}
+                          className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-3 text-xs leading-tight"
+                        >
+                          <p className="font-semibold text-slate-700 text-[0.75rem] tracking-tight">
+                            {ramo.codigo}
+                          </p>
+                          <p className="text-[0.8rem] text-slate-900 mt-1">
+                            {ramo.asignatura}
+                          </p>
+                          <div className="mt-2 text-[0.7rem] text-slate-600">
+                            {ramo.creditos} SCT
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        {/* SIN RESULTADOS DESPUÉS DE GENERAR */}
+        {proyeccionSolicitada &&
+          !loading &&
           !errorMsg &&
           proyeccion.length === 0 &&
           carreraSeleccionada && (

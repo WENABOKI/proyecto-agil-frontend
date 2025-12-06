@@ -95,10 +95,21 @@ export default function MiMalla() {
     .map(Number)
     .sort((a, b) => a - b);
 
+  //  Botón para ir a Proyección
+  const handleGenerarProyeccion = () => {
+    const confirmar = window.confirm(
+      "¿Deseas generar una proyección académica automática con tus semestres restantes?"
+    );
+    if (confirmar) {
+      navigate("/proyecciones", { state: { generar: true } });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 px-4 py-6 md:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <div>
             <h1 className="text-3xl font-bold text-[#2D5F8F] flex items-center gap-2">
               <GraduationCap size={28} className="text-[#2D5F8F]" />
@@ -112,6 +123,22 @@ export default function MiMalla() {
           </div>
         </div>
 
+        {/* BOTÓN / TARJETA PROYECCIÓN ACADÉMICA */}
+        <div className="mb-4">
+          <button
+            onClick={handleGenerarProyeccion}
+            className="inline-flex flex-col px-5 py-3 rounded-lg shadow-md bg-[#0f607a] text-left text-white hover:bg-[#0c4d60] transition"
+          >
+            <span className="text-sm font-semibold">
+              Proyección académica
+            </span>
+            <span className="text-xs text-slate-100">
+              Generar sugerencia de semestres restantes
+            </span>
+          </button>
+        </div>
+
+        {/* BOTONES DE CARRERA (si tiene más de una) */}
         {user && user.carreras.length > 1 && (
           <div className="flex flex-wrap gap-2 mb-6">
             {user.carreras.map((c) => {
@@ -136,6 +163,7 @@ export default function MiMalla() {
           </div>
         )}
 
+        {/* ESTADOS */}
         {loading && (
           <div className="flex items-center gap-2 text-slate-600">
             <Loader2 size={18} className="animate-spin" />
@@ -145,6 +173,7 @@ export default function MiMalla() {
 
         {errorMsg && <p className="text-red-500 font-medium mb-4">{errorMsg}</p>}
 
+        {/* GRID DE NIVELES */}
         {!loading && !errorMsg && nivelesOrdenados.length > 0 && (
           <div className="mt-6">
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
@@ -181,6 +210,7 @@ export default function MiMalla() {
           </div>
         )}
 
+        {/* SIN MALLA */}
         {!loading && !errorMsg && malla.length === 0 && carreraSeleccionada && (
           <p className="text-slate-600 mt-4">
             No se encontraron asignaturas para esta malla.
