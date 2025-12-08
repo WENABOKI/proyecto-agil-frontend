@@ -29,9 +29,9 @@ interface ProyeccionResponse {
   cursosSugeridos: CursoProyectado[];
 }
 
-// ===============================
-//   CONVERSOR ROMANO 1–20 SIMPLE
-// ===============================
+
+// CONVERSOR ROMANO 1–20 SIMPLE 
+
 const numeroToRoman = (n: number) => {
   const romans = [
     "", // índice 0 no se usa
