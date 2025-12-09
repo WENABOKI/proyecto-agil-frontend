@@ -13,7 +13,7 @@ interface UserData {
   carreras: Carrera[];
 }
 
-// Ramo en la proyección (mismo estilo que MiMalla)
+// Ramo en la proyección
 interface RamoProyeccion {
   codigo: string;
   asignatura: string;
@@ -31,23 +31,6 @@ interface ProyeccionSemestre {
   creditosTotales: number;
   ramos: RamoProyeccion[];
 }
-
-// Colores del ramo según estado (mismo helper que MiMalla)
-const getRamoClasses = (ramo: RamoProyeccion) => {
-  if (ramo.estado === "APROBADO")
-    return "bg-green-100 border-green-300 text-green-900";
-
-  if (ramo.estado === "REPROBADO")
-    return "bg-red-100 border-red-300 text-red-900";
-
-  if (ramo.estado === "INSCRITO")
-    return "bg-yellow-100 border-yellow-300 text-yellow-900";
-
-  if (ramo.disponible === false)
-    return "bg-slate-200 border-slate-300 text-slate-500";
-
-  return "bg-white border-slate-200 text-slate-900";
-};
 
 // Formatea 202610 -> "2026-10"
 const formatSemestre = (semestre: number) => {
@@ -68,7 +51,7 @@ export default function Proyeccion() {
 
   const navigate = useNavigate();
 
-  // Recuperar usuario desde localStorage (misma lógica que antes)
+  // Recuperar usuario desde localStorage
   useEffect(() => {
     const raw = localStorage.getItem("user");
     if (!raw) {
@@ -88,7 +71,7 @@ export default function Proyeccion() {
     }
   }, [navigate]);
 
-  // Llamar backend para obtener la proyección (misma lógica, solo cambia el estilo después)
+  // Llamar backend para obtener la proyección
   useEffect(() => {
     const fetchProyeccion = async () => {
       if (!carreraSeleccionada) return;
@@ -134,13 +117,13 @@ export default function Proyeccion() {
     <div className="min-h-screen bg-slate-100 px-4 py-6 md:px-8">
       <div className="max-w-7xl mx-auto">
 
-        {/* Título (similar a MiMalla) */}
+        {/* Título */}
         <h1 className="text-3xl font-bold text-[#2D5F8F] flex items-center gap-2 mb-4">
           <GraduationCap size={28} className="text-[#2D5F8F]" />
           Proyección Académica
         </h1>
 
-        {/* Resumen simple arriba */}
+        {/* Resumen */}
         {proyeccion.length > 0 && (
           <p className="text-sm text-slate-600 mb-4">
             Semestres proyectados:{" "}
@@ -151,7 +134,7 @@ export default function Proyeccion() {
           </p>
         )}
 
-        {/* Selector de carrera (igual estilo que MiMalla) */}
+        {/* Selector de carrera, mismo estilo que MiMalla */}
         {user && user.carreras.length > 1 && (
           <div className="flex flex-wrap gap-2 mb-6">
             {user.carreras.map((c) => {
@@ -187,7 +170,7 @@ export default function Proyeccion() {
         {/* Error */}
         {errorMsg && <p className="text-red-500 mb-4">{errorMsg}</p>}
 
-        {/* Proyección con ESTILO de MiMalla (pero mismo contenido de antes) */}
+        {/* Proyección con estilo similar a MiMalla, pero ramos SIEMPRE neutros */}
         {!loading && !errorMsg && proyeccion.length > 0 && (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6 mt-6">
             {proyeccion.map((sem) => (
@@ -195,7 +178,7 @@ export default function Proyeccion() {
                 key={sem.semestre}
                 className="bg-slate-200/80 rounded-xl shadow-inner"
               >
-                {/* Header azul del semestre (como la malla) */}
+                {/* Header azul del semestre */}
                 <div className="bg-[#2D5F8F] text-white text-center py-2 rounded-t-xl font-semibold text-sm">
                   {formatSemestre(sem.semestre)}
                   <span className="block text-[0.7rem] font-normal">
@@ -208,9 +191,7 @@ export default function Proyeccion() {
                   {sem.ramos.map((ramo) => (
                     <div
                       key={ramo.codigo}
-                      className={`rounded-lg px-3 py-3 text-xs shadow-sm border ${getRamoClasses(
-                        ramo
-                      )}`}
+                      className="rounded-lg px-3 py-3 text-xs shadow-sm border bg-white border-slate-200 text-slate-900"
                     >
                       <p className="font-semibold text-[0.75rem]">
                         {ramo.codigo}
