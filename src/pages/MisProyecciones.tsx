@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { GraduationCap, Loader2 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 interface Carrera {
   codigo: string;
@@ -13,49 +13,62 @@ interface UserData {
   carreras: Carrera[];
 }
 
-interface CursoProyectado {
+// Ramo en la proyección (mismo estilo que MiMalla)
+interface RamoProyeccion {
   codigo: string;
   asignatura: string;
   creditos: number;
-  semestreSugerido: number;
-  nivel?: number;
+  nivel: number;
+  prereq: string;
+  estado?: string;
+  disponible?: boolean;
+  oportunidad?: number;
+  prioridad?: number;
 }
 
-interface ProyeccionResponse {
-  message: string;
-  rut: string;
-  carrera: string;
-  totalCreditos: number;
-  cursosSugeridos: CursoProyectado[];
+interface ProyeccionSemestre {
+  semestre: number;          // ej: 202610
+  creditosTotales: number;
+  ramos: RamoProyeccion[];
 }
 
+// Colores del ramo según estado (mismo helper que MiMalla)
+const getRamoClasses = (ramo: RamoProyeccion) => {
+  if (ramo.estado === "APROBADO")
+    return "bg-green-100 border-green-300 text-green-900";
 
-// CONVERSOR ROMANO 1–20 SIMPLE 
+  if (ramo.estado === "REPROBADO")
+    return "bg-red-100 border-red-300 text-red-900";
 
-const numeroToRoman = (n: number) => {
-  const romans = [
-    "", // índice 0 no se usa
-    "I", "II", "III", "IV", "V",
-    "VI", "VII", "VIII", "IX", "X",
-    "XI", "XII", "XIII", "XIV", "XV",
-    "XVI", "XVII", "XVIII", "XIX", "XX"
-  ];
-  return romans[n] ?? String(n);
+  if (ramo.estado === "INSCRITO")
+    return "bg-yellow-100 border-yellow-300 text-yellow-900";
+
+  if (ramo.disponible === false)
+    return "bg-slate-200 border-slate-300 text-slate-500";
+
+  return "bg-white border-slate-200 text-slate-900";
+};
+
+// Formatea 202610 -> "2026-10"
+const formatSemestre = (semestre: number) => {
+  const s = semestre.toString();
+  if (s.length !== 6) return s;
+  const year = s.slice(0, 4);
+  const periodo = s.slice(4, 6);
+  return `${year}-${periodo}`;
 };
 
 export default function Proyeccion() {
   const [user, setUser] = useState<UserData | null>(null);
   const [carreraSeleccionada, setCarreraSeleccionada] = useState<Carrera | null>(null);
-  const [proyeccion, setProyeccion] = useState<CursoProyectado[]>([]);
-  const [meta, setMeta] = useState<Omit<ProyeccionResponse, "cursosSugeridos"> | null>(null);
+
+  const [proyeccion, setProyeccion] = useState<ProyeccionSemestre[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [proyeccionSolicitada, setProyeccionSolicitada] = useState(false);
 
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // 1) Recuperar usuario y carrera seleccionada desde localStorage
+  // Recuperar usuario desde localStorage (misma lógica que antes)
   useEffect(() => {
     const raw = localStorage.getItem("user");
     if (!raw) {
@@ -70,121 +83,75 @@ export default function Proyeccion() {
     };
 
     setUser(data);
-    if (data.carreras.length > 0) setCarreraSeleccionada(data.carreras[0]);
+    if (data.carreras.length > 0) {
+      setCarreraSeleccionada(data.carreras[0]);
+    }
   }, [navigate]);
 
-  // 2) (Opcional) Si alguna vez llegas con state.generar desde otro lado
-  useEffect(() => {
-    const state = location.state as any;
-    if (state?.generar) {
-      setProyeccionSolicitada(true);
-    }
-  }, [location.state]);
-
-  // 3) Leer de sessionStorage si ya se había generado proyección en esta sesión
-  useEffect(() => {
-    if (!user || !carreraSeleccionada) return;
-
-    const key = `projectionGenerated:${user.rut}:${carreraSeleccionada.codigo}-${carreraSeleccionada.catalogo}`;
-    const flag = sessionStorage.getItem(key);
-
-    if (flag === "true") {
-      setProyeccionSolicitada(true);
-    }
-  }, [user, carreraSeleccionada]);
-
-  // 4) Cada vez que proyeccionSolicitada pase a true y tengamos user + carrera,
-  //    guardar el flag en sessionStorage (para esta sesión)
-  useEffect(() => {
-    if (!proyeccionSolicitada || !user || !carreraSeleccionada) return;
-
-    const key = `projectionGenerated:${user.rut}:${carreraSeleccionada.codigo}-${carreraSeleccionada.catalogo}`;
-    sessionStorage.setItem(key, "true");
-  }, [proyeccionSolicitada, user, carreraSeleccionada]);
-
-  // 5) Cuando cambia la carrera Y ya se solicitó proyección, pedirla al backend
+  // Llamar backend para obtener la proyección (misma lógica, solo cambia el estilo después)
   useEffect(() => {
     const fetchProyeccion = async () => {
-      if (!carreraSeleccionada || !proyeccionSolicitada) return;
+      if (!carreraSeleccionada) return;
+
       setLoading(true);
       setErrorMsg(null);
 
       try {
         const res = await fetch(
-          `http://localhost:3000/carrers/projection/auto/${carreraSeleccionada.codigo}/${carreraSeleccionada.catalogo}`,
+          `http://localhost:3000/projection/automatica/${carreraSeleccionada.codigo}/${carreraSeleccionada.catalogo}`,
           { credentials: "include" }
         );
 
         const data = await res.json();
 
-        if (!res.ok || !Array.isArray(data.cursosSugeridos)) {
+        if (!res.ok || !Array.isArray(data)) {
           setErrorMsg("Error al obtener la proyección académica.");
-          setProyeccion([]);
-          setMeta(null);
           return;
         }
 
-        setProyeccion(data.cursosSugeridos);
-        setMeta({
-          message: data.message,
-          rut: data.rut,
-          carrera: data.carrera,
-          totalCreditos: data.totalCreditos,
-        });
-      } catch {
+        const ordenada = (data as ProyeccionSemestre[]).sort(
+          (a, b) => a.semestre - b.semestre
+        );
+
+        setProyeccion(ordenada);
+      } catch (error) {
+        console.error(error);
         setErrorMsg("No se pudo conectar con el servidor.");
-        setProyeccion([]);
-        setMeta(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProyeccion();
-  }, [carreraSeleccionada, proyeccionSolicitada]);
+  }, [carreraSeleccionada]);
 
-  // 6) Agrupar por semestreSugerido (semestres restantes)
-  const semestres: Record<number, CursoProyectado[]> = {};
-  if (Array.isArray(proyeccion)) {
-    proyeccion.forEach((r) => {
-      const sem = r.semestreSugerido ?? 1;
-      if (!semestres[sem]) semestres[sem] = [];
-      semestres[sem].push(r);
-    });
-  }
-
-  const semestresOrdenados = Object.keys(semestres)
-    .map(Number)
-    .sort((a, b) => a - b);
+  const totalGeneral = proyeccion.reduce(
+    (sum, p) => sum + p.creditosTotales,
+    0
+  );
 
   return (
     <div className="min-h-screen bg-slate-100 px-4 py-6 md:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-[#2D5F8F] flex items-center gap-2">
-              <GraduationCap size={28} className="text-[#2D5F8F]" />
-              Proyección Académica
-            </h1>
-            {user && (
-              <p className="text-sm text-slate-600 mt-1">
-                RUT: <span className="font-semibold">{user.rut}</span>
-              </p>
-            )}
-            {carreraSeleccionada && (
-              <p className="text-xs text-slate-600 mt-1">
-                Carrera:{" "}
-                <span className="font-semibold">
-                  {carreraSeleccionada.nombre} (
-                  {carreraSeleccionada.codigo}-{carreraSeleccionada.catalogo})
-                </span>
-              </p>
-            )}
-          </div>
-        </div>
 
-        {/* BOTONES DE CARRERA (si tiene más de una) */}
+        {/* Título (similar a MiMalla) */}
+        <h1 className="text-3xl font-bold text-[#2D5F8F] flex items-center gap-2 mb-4">
+          <GraduationCap size={28} className="text-[#2D5F8F]" />
+          Proyección Académica
+        </h1>
+
+        {/* Resumen simple arriba */}
+        {proyeccion.length > 0 && (
+          <p className="text-sm text-slate-600 mb-4">
+            Semestres proyectados:{" "}
+            <span className="font-semibold">{proyeccion.length}</span>
+            {" — "}
+            Créditos totales proyectados:{" "}
+            <span className="font-semibold">{totalGeneral}</span>
+          </p>
+        )}
+
+        {/* Selector de carrera (igual estilo que MiMalla) */}
         {user && user.carreras.length > 1 && (
           <div className="flex flex-wrap gap-2 mb-6">
             {user.carreras.map((c) => {
@@ -196,7 +163,7 @@ export default function Proyeccion() {
                 <button
                   key={`${c.codigo}-${c.catalogo}`}
                   onClick={() => setCarreraSeleccionada(c)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
+                  className={`px-4 py-2 rounded-full text-sm border ${
                     active
                       ? "bg-[#2D5F8F] text-white border-[#2D5F8F]"
                       : "bg-white text-[#2D5F8F] border-[#2D5F8F] hover:bg-[#e0ebf7]"
@@ -209,75 +176,71 @@ export default function Proyeccion() {
           </div>
         )}
 
-        {/* SI NO SE HA SOLICITADO NINGUNA PROYECCIÓN EN ESTA SESIÓN */}
-        {!proyeccionSolicitada && !loading && !errorMsg && (
-          <p className="text-slate-600 mt-6 text-center">
-            El alumno aún no ha generado ninguna proyección académica.
-          </p>
-        )}
-
-        {/* ESTADOS DE CARGA / ERROR */}
+        {/* Cargando */}
         {loading && (
           <div className="flex items-center gap-2 text-slate-600">
             <Loader2 size={18} className="animate-spin" />
-            <span>Calculando proyección...</span>
+            <span>Cargando proyección...</span>
           </div>
         )}
 
-        {errorMsg && (
-          <p className="text-red-500 font-medium mb-4">{errorMsg}</p>
+        {/* Error */}
+        {errorMsg && <p className="text-red-500 mb-4">{errorMsg}</p>}
+
+        {/* Proyección con ESTILO de MiMalla (pero mismo contenido de antes) */}
+        {!loading && !errorMsg && proyeccion.length > 0 && (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6 mt-6">
+            {proyeccion.map((sem) => (
+              <div
+                key={sem.semestre}
+                className="bg-slate-200/80 rounded-xl shadow-inner"
+              >
+                {/* Header azul del semestre (como la malla) */}
+                <div className="bg-[#2D5F8F] text-white text-center py-2 rounded-t-xl font-semibold text-sm">
+                  {formatSemestre(sem.semestre)}
+                  <span className="block text-[0.7rem] font-normal">
+                    {sem.creditosTotales} SCT
+                  </span>
+                </div>
+
+                {/* Ramos proyectados en ese semestre */}
+                <div className="p-3 space-y-3">
+                  {sem.ramos.map((ramo) => (
+                    <div
+                      key={ramo.codigo}
+                      className={`rounded-lg px-3 py-3 text-xs shadow-sm border ${getRamoClasses(
+                        ramo
+                      )}`}
+                    >
+                      <p className="font-semibold text-[0.75rem]">
+                        {ramo.codigo}
+                      </p>
+                      <p className="text-[0.8rem] mt-1">
+                        {ramo.asignatura}
+                      </p>
+
+                      <div className="mt-2 text-[0.7rem]">
+                        {ramo.creditos} SCT
+                      </div>
+                    </div>
+                  ))}
+
+                  {sem.ramos.length === 0 && (
+                    <p className="text-xs text-slate-500">
+                      Sin ramos sugeridos para este semestre.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
-        {/* GRID DE SEMESTRES RESTANTES (solo si hubo solicitud y hay datos) */}
-        {!loading &&
-          !errorMsg &&
-          proyeccionSolicitada &&
-          semestresOrdenados.length > 0 && (
-            <div className="mt-6">
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
-                {semestresOrdenados.map((semestre) => (
-                  <div
-                    key={semestre}
-                    className="bg-slate-200/80 rounded-xl shadow-inner flex flex-col h-full"
-                  >
-                    <div className="bg-[#2D5F8F] text-white text-center py-2 rounded-t-xl font-semibold tracking-wide">
-                      {numeroToRoman(semestre)}
-                    </div>
-
-                    <div className="p-3 space-y-3">
-                      {semestres[semestre].map((ramo) => (
-                        <div
-                          key={ramo.codigo}
-                          className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-3 text-xs leading-tight"
-                        >
-                          <p className="font-semibold text-slate-700 text-[0.75rem] tracking-tight">
-                            {ramo.codigo}
-                          </p>
-                          <p className="text-[0.8rem] text-slate-900 mt-1">
-                            {ramo.asignatura}
-                          </p>
-                          <div className="mt-2 text-[0.7rem] text-slate-600">
-                            {ramo.creditos} SCT
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-        {/* SIN RESULTADOS DESPUÉS DE GENERAR */}
-        {proyeccionSolicitada &&
-          !loading &&
-          !errorMsg &&
-          proyeccion.length === 0 &&
-          carreraSeleccionada && (
-            <p className="text-slate-600 mt-4">
-              No se encontraron ramos proyectados para esta carrera.
-            </p>
-          )}
+        {!loading && !errorMsg && proyeccion.length === 0 && carreraSeleccionada && (
+          <p className="mt-6 text-slate-600">
+            No hay proyección disponible para esta carrera.
+          </p>
+        )}
       </div>
     </div>
   );

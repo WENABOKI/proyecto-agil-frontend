@@ -28,11 +28,20 @@ const nivelToRoman = (nivel: number) => {
   return romans[nivel - 1] ?? String(nivel);
 };
 
-// colores del ramo
+// Colores del ramo según estado
 const getRamoClasses = (ramo: Ramo) => {
-  if (ramo.estado === "APROBADO") return "bg-green-100 border-green-300 text-green-900";
-  if (ramo.estado === "REPROBADO") return "bg-red-100 border-red-300 text-red-900";
-  if (ramo.disponible === false) return "bg-slate-200 border-slate-300 text-slate-500";
+  if (ramo.estado === "APROBADO")
+    return "bg-green-100 border-green-300 text-green-900";
+
+  if (ramo.estado === "REPROBADO")
+    return "bg-red-100 border-red-300 text-red-900";
+
+  if (ramo.estado === "INSCRITO")
+    return "bg-yellow-100 border-yellow-300 text-yellow-900";
+
+  if (ramo.disponible === false)
+    return "bg-slate-200 border-slate-300 text-slate-500";
+
   return "bg-white border-slate-200 text-slate-900";
 };
 
@@ -44,6 +53,7 @@ export default function MiMalla() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // Obtener usuario
   useEffect(() => {
     const raw = localStorage.getItem("user");
     if (!raw) {
@@ -61,6 +71,7 @@ export default function MiMalla() {
     if (data.carreras.length > 0) setCarreraSeleccionada(data.carreras[0]);
   }, [navigate]);
 
+  // Obtener malla desde backend
   useEffect(() => {
     const fetchMalla = async () => {
       if (!carreraSeleccionada || !user) return;
@@ -70,7 +81,7 @@ export default function MiMalla() {
 
       try {
         const res = await fetch(
-          `http://localhost:3000/mimalla/${carreraSeleccionada.codigo}/${carreraSeleccionada.catalogo}/${user.rut}`,
+          `http://localhost:3000/mimalla/${carreraSeleccionada.codigo}/${carreraSeleccionada.catalogo}`,
           { credentials: "include" }
         );
 
@@ -94,6 +105,7 @@ export default function MiMalla() {
     fetchMalla();
   }, [carreraSeleccionada, user]);
 
+  // Agrupar por niveles
   const niveles: Record<number, Ramo[]> = {};
   malla.forEach((r) => {
     if (!niveles[r.nivel]) niveles[r.nivel] = [];
@@ -142,6 +154,7 @@ export default function MiMalla() {
           <span className="text-xs">Generar sugerencia de semestres restantes</span>
         </button>
 
+        {/* Selector de carrera */}
         {user && user.carreras.length > 1 && (
           <div className="flex flex-wrap gap-2 mb-6">
             {user.carreras.map((c) => {
@@ -166,15 +179,18 @@ export default function MiMalla() {
           </div>
         )}
 
+        {/* Cargando */}
         {loading && (
           <div className="flex items-center gap-2 text-slate-600">
             <Loader2 size={18} className="animate-spin" />
-            <span>cargando malla...</span>
+            <span>Cargando malla...</span>
           </div>
         )}
 
+        {/* Error */}
         {errorMsg && <p className="text-red-500 mb-4">{errorMsg}</p>}
 
+        {/* Malla */}
         {!loading && !errorMsg && nivelesOrdenados.length > 0 && (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6 mt-6">
             {nivelesOrdenados.map((nivel) => (
@@ -193,6 +209,37 @@ export default function MiMalla() {
                       <p className="text-[0.8rem] mt-1">{ramo.asignatura}</p>
 
                       <div className="mt-2 text-[0.7rem]">{ramo.creditos} SCT</div>
+
+                      {/* 🔥 Nuevo: Prerrequisitos usando nombre del ramo */}
+                      <div className="mt-1 text-[0.65rem] text-slate-600">
+                        <span className="font-semibold">Prerrequisitos:</span>{" "}
+                        {ramo.prereq && ramo.prereq.trim() !== "" ? (
+                          <span className="relative group cursor-pointer text-blue-600">
+                            {ramo.prereq.split(",").length} cursos ⓘ
+
+                            {/* Tooltip */}
+                            <div className="absolute hidden group-hover:block top-4 left-0 z-20 w-64 p-2 bg-white border rounded shadow-lg text-[0.65rem] leading-tight">
+
+                              {ramo.prereq.split(",").map((codigo) => {
+                                const ramoEncontrado = malla.find(
+                                  (x) => x.codigo === codigo.trim()
+                                );
+                                return (
+                                  <div key={codigo} className="py-[2px]">
+                                    {ramoEncontrado
+                                      ? `${ramoEncontrado.asignatura} (${codigo.trim()})`
+                                      : codigo.trim()}
+                                  </div>
+                                );
+                              })}
+
+                            </div>
+                          </span>
+                        ) : (
+                          "Sin prerrequisitos"
+                        )}
+                      </div>
+
                     </div>
                   ))}
                 </div>
