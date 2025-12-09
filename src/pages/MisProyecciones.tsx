@@ -71,10 +71,19 @@ export default function Proyeccion() {
     }
   }, [navigate]);
 
-  // Llamar backend para obtener la proyección
+  // Llamar backend para obtener la proyección SOLO si hay marca en sessionStorage
   useEffect(() => {
     const fetchProyeccion = async () => {
-      if (!carreraSeleccionada) return;
+      if (!carreraSeleccionada || !user) return;
+
+      // 👇 clave usada cuando generas la proyección en MiMalla
+      const key = `projectionGenerated:${user.rut}:${carreraSeleccionada.codigo}-${carreraSeleccionada.catalogo}`;
+
+      // Si NO existe la marca → no hay proyección generada
+      if (!sessionStorage.getItem(key)) {
+        setProyeccion([]);
+        return;
+      }
 
       setLoading(true);
       setErrorMsg(null);
@@ -106,7 +115,7 @@ export default function Proyeccion() {
     };
 
     fetchProyeccion();
-  }, [carreraSeleccionada]);
+  }, [carreraSeleccionada, user]);
 
   const totalGeneral = proyeccion.reduce(
     (sum, p) => sum + p.creditosTotales,
